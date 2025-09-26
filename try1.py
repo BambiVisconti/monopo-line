@@ -1,5 +1,12 @@
 import random
 import matplotlib.pyplot as plt
+import numpy as np
+from tabulate import tabulate
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.platypus import SimpleDocTemplate, LongTable, TableStyle
+from reportlab.lib.units import mm
+
 
 joueurs = {}
 tours=0
@@ -11,6 +18,34 @@ price=[0,60,0,60,200,200,100,0,100,120,0,140,150,140,160,200,280,0,180,200,0,220
 rent=[j for j in range(40)]
 trainsowner=[-1,-1,-1,-1]
 taxes =0
+matrice= [[0 for i in range(40)] for j in range(40)]
+def matricedecon(n,money,time):
+    global tours
+    global taxes
+    global aquidejouer
+    tours=0
+    aquidejouer=0
+    createplayers(n,money)
+    if time==0:
+        while True:
+            play(aquidejouer%n)
+            if aquidejouer%n==0 :
+                if gamevalidity(n)==False:
+                    matricebien(tours)
+                    matrix_to_pdf(matrice,"matrix.pdf")
+                    break
+    else:
+        for j in range(0,time):
+            play(aquidejouer%n)
+        matricebien(tours)
+        matrix_to_pdf(matrice,"matrix.pdf")
+
+
+
+def matricebien(t):
+    for i in range(40):
+        for j in range(40):
+            matrice[i][j]=round(((matrice[i][j])*100)/t,2)
 
 def createplayers(n, money):
     for i in range(n):
@@ -60,7 +95,10 @@ def play(i):
     elif joueurs[f"joueur{i}"]["validity"] == False: aquidejouer+=1 #rien return juste continuer
     else:
         if joueurs[f"joueur{i}"]["pos"] + dices >39: joueurs[f"joueur{i}"]["money"]+=200
+        before = joueurs[f"joueur{i}"]["pos"]
         joueurs[f"joueur{i}"]["pos"] = (joueurs[f"joueur{i}"]["pos"] + dices)%40
+        after=joueurs[f"joueur{i}"]["pos"]
+        matrice[before][after]+=1
         aquidejouer+=1
         position(i)
         
@@ -165,3 +203,68 @@ def plot_hot(hot):
     plt.title("Histogramme des cases chaudes du plateau Monopoly")
     plt.xticks(range(len(hot)))
     plt.show()
+
+
+
+
+
+def matrix_to_pdf(matrix, filename="matrix.pdf", header=False):
+    # Normalisation: liste de listes
+    try:
+        import numpy as np, pandas as pd
+    except Exception:
+        np = pd = None
+
+    if pd is not None and isinstance(matrix, pd.DataFrame):
+        data = [list(matrix.columns)] + matrix.values.tolist() if header else matrix.values.tolist()
+    elif np is not None and isinstance(matrix, np.ndarray):
+        data = matrix.tolist()
+    else:
+        data = [list(row) for row in matrix]
+
+    if not data:
+        raise ValueError("Matrice vide")
+
+    # Vérif rectangulaire
+    w = len(data[0])
+    if any(len(r) != w for r in data):
+        raise ValueError("Toutes les lignes doivent avoir la même longueur")
+
+    # Doc paysage A4 avec petites marges
+    doc = SimpleDocTemplate(
+        filename,
+        pagesize=landscape(A4),
+        leftMargin=10*mm, rightMargin=10*mm,
+        topMargin=0*mm, bottomMargin=0*mm
+    )
+
+    # Largeur utile (en points)
+    available_w = doc.pagesize[0] - doc.leftMargin - doc.rightMargin
+
+    # Réduction: largeur de chaque colonne pour tenir dans la page
+    col_w = available_w / w
+    colWidths = [col_w] * w
+
+    # Table longue (se coupe verticalement si beaucoup de lignes)
+    tbl = LongTable(data, colWidths=colWidths, repeatRows=1 if header else 0)
+
+    # Style compact pour "dézoomer"
+    tbl.setStyle(TableStyle([
+        ("GRID", (0,0), (-1,-1), 0.3, colors.black),
+        ("ALIGN", (0,0), (-1,-1), "CENTER"),
+        ("VALIGN", (0,0), (-1,-1), "MIDDLE"),
+        ("FONTSIZE", (0,0), (-1,-1), 6),           # ← petite police
+        ("TOPPADDING", (0,0), (-1,-1), 1),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 1),
+        ("LEFTPADDING", (0,0), (-1,-1), 1),
+        ("RIGHTPADDING", (0,0), (-1,-1), 1),
+    ]))
+
+    if header:
+        tbl.setStyle(TableStyle([
+            ("BACKGROUND", (0,0), (-1,0), colors.grey),
+            ("TEXTCOLOR", (0,0), (-1,0), colors.whitesmoke),
+            ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
+        ]))
+
+    doc.build([tbl])
