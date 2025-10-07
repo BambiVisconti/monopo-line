@@ -14,7 +14,6 @@ aquidejouer=0
 
 hot=[0 for j in range(40)]
 owners=[-1 for j in range(40)]
-houses=[0 for p in range(40)]
 price=[0,60,0,60,200,200,100,0,100,120,0,140,150,140,160,200,280,0,180,200,0,220,0,220,240,200,260,260,150,280,0,300,300,0,320,200,0,350,100,400]
 rent=[j for j in range(40)]
 trainsowner=[-1,-1,-1,-1]
@@ -41,10 +40,6 @@ def matricedecon(n,money,time):
         matricebien(tours)
         matrix_to_pdf(matrice,"matrix.pdf")
 
-
-
-    
-    
 
 
 def matricebien(t):

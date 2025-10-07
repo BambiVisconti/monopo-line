@@ -12,14 +12,12 @@ joueurs = {}
 tours=0
 aquidejouer=0
 
-hot=[0 for j in range(40)]
-owners=[-1 for j in range(40)]
-houses=[0 for p in range(40)]
-price=[0,60,0,60,200,200,100,0,100,120,0,140,150,140,160,200,280,0,180,200,0,220,0,220,240,200,260,260,150,280,0,300,300,0,320,200,0,350,100,400]
-rent=[j for j in range(40)]
-trainsowner=[-1,-1,-1,-1]
-taxes =0
-matrice= [[0 for i in range(40)] for j in range(40)]
+hot=[0 for j in range(12)]
+owners=[-1 for j in range(12)]
+price=[0,40,60,0,120,140,0,200,220,0,300,350]
+rent=[int(j/7) for j in price]
+taxes = 0
+matrice= [[0 for i in range(12)] for j in range(12)]
 def matricedecon(n,money,time):
     global tours
     global taxes
@@ -33,23 +31,19 @@ def matricedecon(n,money,time):
             if aquidejouer%n==0 :
                 if gamevalidity(n)==False:
                     matricebien(tours)
-                    matrix_to_pdf(matrice,"matrix.pdf")
+                    matrix_to_pdf(matrice,"matrixfacile.pdf")
                     break
     else:
         for j in range(0,time):
             play(aquidejouer%n)
         matricebien(tours)
-        matrix_to_pdf(matrice,"matrix.pdf")
+        matrix_to_pdf(matrice,"matrixfacile.pdf")
 
-
-
-    
-    
 
 
 def matricebien(t):
-    for i in range(40):
-        for j in range(40):
+    for i in range(12):
+        for j in range(12):
             matrice[i][j]=round(((matrice[i][j])*100)/t,2)
 
 def createplayers(n, money):
@@ -84,11 +78,8 @@ def game(n,money,time): #time=0 infini
             
 
 def roll(i):
-    first=random.randint(1, 6)
-    second=random.randint(1, 6)
-    if first == second:
-        joueurs[f"joueur{i}"]["jailtime"]=0
-    return first + second
+    first=random.randint(1, 4)
+    return first
 
 def play(i):
     global aquidejouer
@@ -99,9 +90,9 @@ def play(i):
     if joueurs[f"joueur{i}"]["jailtime"]>0: joueurs[f"joueur{i}"]["jailtime"] += -1
     elif joueurs[f"joueur{i}"]["validity"] == False: aquidejouer+=1 #rien return juste continuer
     else:
-        if joueurs[f"joueur{i}"]["pos"] + dices >39: joueurs[f"joueur{i}"]["money"]+=200
+        if joueurs[f"joueur{i}"]["pos"] + dices >11: joueurs[f"joueur{i}"]["money"]+=150
         before = joueurs[f"joueur{i}"]["pos"]
-        joueurs[f"joueur{i}"]["pos"] = (joueurs[f"joueur{i}"]["pos"] + dices)%40
+        joueurs[f"joueur{i}"]["pos"] = (joueurs[f"joueur{i}"]["pos"] + dices)%12
         after=joueurs[f"joueur{i}"]["pos"]
         matrice[before][after]+=1
         aquidejouer+=1
@@ -111,21 +102,19 @@ def play(i):
 def position(i):
     global tours
     tours+=1
-    if joueurs[f"joueur{i}"]["pos"] in [1,3,6,8,9,11,13,14,16,18,19,21,23,24,26,27,29,31,32,34,37,39]: onproprio(i)
-    elif joueurs[f"joueur{i}"]["pos"] in [5,15,25,35]: ontrain(i)
-    elif joueurs[f"joueur{i}"]["pos"] in [7,22,36]: onluck(i)
-    elif joueurs[f"joueur{i}"]["pos"] == 30:
-        joueurs[f"joueur{i}"]["pos"]=10
+    if joueurs[f"joueur{i}"]["pos"] in [1,2,4,5,7,8,10,11]: onproprio(i)
+    elif joueurs[f"joueur{i}"]["pos"] == 9:
+        joueurs[f"joueur{i}"]["pos"]=3
         hot[joueurs[f"joueur{i}"]["pos"]]+=1
         joueurs[f"joueur{i}"]["jailtime"]=3
-        hot[30]+=1
+        hot[9]+=1
     else:
         hot[joueurs[f"joueur{i}"]["pos"]]+=1
 
 def playervalidity(i):
     if joueurs[f"joueur{i}"]["money"] < 0:
         joueurs[f"joueur{i}"]["validity"]=False
-        for k in range(40):
+        for k in range(12):
             if owners[k]==i: owners[k]= -1
 
 
@@ -152,29 +141,6 @@ def onproprio(i):
         playervalidity(i)
         #print("le joueur ",i," tombe chez le joueur ",owner," et lui reste $",joueurs[f"joueur{i}"]["money"])
         
-
-def ontrain(i):
-    hot[joueurs[f"joueur{i}"]["pos"]]+=1
-    place = joueurs[f"joueur{i}"]["pos"]
-    if owners[place]==i: pass
-    elif owners[place]==-1:
-        if joueurs[f"joueur{i}"]["money"]> 1.5*(price[place]):
-            owners[place]=i
-            trainsowner[int((place-5)/10)]=i
-            joueurs[f"joueur{i}"]["money"] += -price[place]
-            #print("le joueur ",i," achete propriété ",place)
-    else:
-        owner=owners[place]
-        account=trainsowner.count(owner)
-        joueurs[f"joueur{i}"]["money"] += -50*account
-        joueurs[f"joueur{owner}"]["money"] += 50*account
-        playervalidity(i)
-        #print("TRAIN",i,owner,account,trainsowner)
-        #print("le joueur ",i," tombe chez le joueur ",owner," et lui reste $",joueurs[f"joueur{i}"]["money"])
-    
-
-def onluck(i):
-    hot[joueurs[f"joueur{i}"]["pos"]]+=1
 
 
 def endgame(n):
