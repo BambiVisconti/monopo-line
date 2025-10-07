@@ -11,13 +11,36 @@ from reportlab.lib.units import mm
 joueurs = {}
 tours=0
 aquidejouer=0
-
+quartier=[-1,-1,-1,-1]
+houses=[0 for j in range(12)]
+ROI=[0 for h in range(12)]
 hot=[0 for j in range(12)]
 owners=[-1 for j in range(12)]
 price=[0,40,60,0,120,140,0,200,220,0,300,350]
+revenu=[0 for i in range(12)]
 rent=[int(j/7) for j in price]
+timestamp=[0 for i in range(12)]
 taxes = 0
 matrice= [[0 for i in range(12)] for j in range(12)]
+
+def inigame():
+    joueurs = {}
+    tours=0
+    aquidejouer=0
+    quartier=[-1,-1,-1,-1]
+    houses=[0 for j in range(12)]
+    ROI=[0 for h in range(12)]
+    hot=[0 for j in range(12)]
+    owners=[-1 for j in range(12)]
+    price=[0,40,60,0,120,140,0,200,220,0,300,350]
+    revenu=[0 for i in range(12)]
+    rent=[int(j/7) for j in price]
+    timestamp=[0 for i in range(12)]
+    taxes = 0
+    matrice= [[0 for i in range(12)] for j in range(12)]
+
+    
+
 def matricedecon(n,money,time):
     global tours
     global taxes
@@ -39,7 +62,28 @@ def matricedecon(n,money,time):
         matricebien(tours)
         matrix_to_pdf(matrice,"matrixfacile.pdf")
 
+def strategiedachatmaison(i):
+    place=joueurs[f"joueur{i}"]["pos"]
+    taro=50*int(place/3) + 50
+    if i!=0:
+        if joueurs[f"joueur{i}"]["money"] > taro*2: buyhouse(i)
+    else:
+        if joueurs[f"joueur{i}"]["money"] > taro*1.5: buyhouse(i)
+        
 
+def buyhouse(i):
+    place=joueurs[f"joueur{i}"]["pos"]
+    if quartier[int(place/3)]==i and houses[place]<6:
+        taro=50*int(place/3) + 50
+        if joueurs[f"joueur{i}"]["money"]>taro:
+            houses[place]+=1
+            joueurs[f"joueur{i}"]["money"] -= taro
+            
+
+def verifierquartier():
+    for j in range(11):
+        if owners[j]==owners[j+1] and owners[j]!=-1:
+            quartier[int(j/3)]= owners[j]
 
 def matricebien(t):
     for i in range(12):
@@ -60,6 +104,7 @@ def game(n,money,time): #time=0 infini
     global tours
     global taxes
     global aquidejouer
+    inigame()
     tours=0
     aquidejouer=0
     createplayers(n,money)
@@ -73,12 +118,16 @@ def game(n,money,time): #time=0 infini
     else:
         for j in range(0,time):
             play(aquidejouer%n)
-
-        endgame(n)
+            if aquidejouer%n==0 :
+               if gamevalidity(n)==False:
+                   endgame(n)
+                   break
+        if gamevalidity(n)==True:
+            endgame(n)
             
 
 def roll(i):
-    first=random.randint(1, 4)
+    first=random.randint(1, 3)
     return first
 
 def play(i):
@@ -128,28 +177,40 @@ def gamevalidity(n):
 def onproprio(i):
     hot[joueurs[f"joueur{i}"]["pos"]]+=1
     place = joueurs[f"joueur{i}"]["pos"]
-    if owners[place]==i: pass
+    if owners[place]==i:
+        strategiedachatmaison(i)
     elif owners[place]==-1:
         if joueurs[f"joueur{i}"]["money"]> 1.5*(price[place]):
             owners[place]=i
+            timestamp[place]=tours
+            verifierquartier()
             joueurs[f"joueur{i}"]["money"] += -price[place]
             #print("le joueur ",i," achete propriété ",place)
     else:
+        loyer=(rent[place])*(2**(houses[place]))
         owner=owners[place]
-        joueurs[f"joueur{i}"]["money"] += -rent[place]
-        joueurs[f"joueur{owner}"]["money"] += rent[place]
+        joueurs[f"joueur{i}"]["money"] += -loyer
+        joueurs[f"joueur{owner}"]["money"] += loyer
+        revenu[place] += loyer
         playervalidity(i)
         #print("le joueur ",i," tombe chez le joueur ",owner," et lui reste $",joueurs[f"joueur{i}"]["money"])
         
-
+def calculROI():
+    for h in range(12):
+        if price[h]==0: ROI[h]=0
+        else: ROI[h]= int((revenu[h]*(tours-timestamp[h]))/(tours*price[h]))
 
 def endgame(n):
-    for j in range(40):
+    for j in range(12):
         hot[j]=100*((hot[j])/tours)
     print("La partie a durée ",int(aquidejouer/n)," tours")
+    calculROI()
+    print("ROI:",ROI)
+    print("REVENU:", revenu)
+    print("HOUSES:", houses)
+    print("QUARTIERS", quartier)
     print(joueurs)
     print(owners)
-    print(trainsowner)
     a=0
     for j in hot: a+=j 
     print(a)
